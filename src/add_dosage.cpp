@@ -16,6 +16,7 @@ namespace mc = moodycamel;
 
 template<typename Out> void split(const std::string &s, char delim, Out result);
 std::vector<std::string> split(const std::string &s, char delim);
+std::string header_to_str(std::vector<std::string>);
 bool startsWith(const std::string& haystack, const std::string& needle);
 double PLtoPP(std::string x);
 void print_help();
@@ -24,12 +25,13 @@ void print_help();
 int main (int argc, char *argv[]) {
 
     // VCF constants
-    const int REF = 3;
-    const int ALT = 4;
-    const int FORMAT = 8;
-    const int ENTRY_START = FORMAT + 1;
+    const size_t REF = 3;
+    const size_t ALT = 4;
+    const size_t FORMAT = 8;
+    const size_t ENTRY_START = FORMAT + 1;
     const char ENTRY_SEP = ':';
     const char PL_SEP = ',';
+    const std::string PL = "PL";
 
     // taskqueue constants
     const size_t Q_SIZE = 1000; 
@@ -54,6 +56,8 @@ int main (int argc, char *argv[]) {
         std::string entry;
         std::stringstream ss_line;
 
+        std::vector<std::string> header;
+
         ss_line.setf(std::ios::fixed,std::ios::floatfield);
         ss_line.precision(2);
 
@@ -67,8 +71,14 @@ int main (int argc, char *argv[]) {
             }
 
             // buffer the header data
-            if (startsWith(line, "#")) {
-                ss_line << line << std::endl;
+            if (startsWith(line, "##")) {
+                header.push_back(line);
+                continue;
+            } else if (startsWith(line, "#")) {
+                header.push_back("##FORMAT=<ID=DS,Number=1,Type=String,Description=\"Expected Posterior Genotype\">");
+                header.push_back(line);
+                std::sort(header.begin(), header.end());
+                ss_line << header_to_str(header);
                 continue;
             }
 
@@ -156,6 +166,14 @@ std::vector<std::string> split(const std::string &s, char delim) {
     std::vector<std::string> elems;
     split(s, delim, std::back_inserter(elems));
     return elems;
+}
+
+std::string header_to_str(std::vector<std::string> header) {
+    std::stringstream ss_line;
+    for (std::string & str : header) {
+        ss_line << str << std::endl;
+    }
+    return ss_line.str();
 }
 
 bool startsWith(const std::string& haystack, const std::string& needle) {
